@@ -1,6 +1,7 @@
 defmodule Jex.GenerateBehaviour do
   @moduledoc """
-  Turns the current module into a behaviour.
+  Turns the current module into a behaviour based on the specs of publicly
+  defined functions.
   """
 
   defmacro __using__(_opts) do

@@ -1,5 +1,5 @@
 # Used by "mix format"
-locals_without_parens = [inject: 2]
+locals_without_parens = [resolve_with: 1, resolve_with: 2]
 
 [
   export: [locals_without_parens: locals_without_parens],

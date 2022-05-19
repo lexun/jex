@@ -1,5 +1,6 @@
 defmodule Jex.Resolver do
   @callback resolve(atom) :: atom
+
   defmacro __using__(_opts) do
     quote do
       @behaviour unquote(__MODULE__)
@@ -7,4 +8,6 @@ defmodule Jex.Resolver do
       defoverridable resolve: 1
     end
   end
+
+  def resolve(target), do: target
 end

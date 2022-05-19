@@ -1,37 +1,78 @@
 defmodule Jex.Injector do
-  alias Jex.Resolver
+  alias Jex.{Interceptor, Resolver}
 
-  defmacro __using__(_opts) do
-    quote do
-      import unquote(__MODULE__), only: [inject: 2]
+  defstruct [:caller, :resolver, nodes: [], dynamic: false]
+
+  defmacro __using__(do: block) do
+    if Jex.ElixirSense.active?() do
+      remove_configuration(block)
+    else
+      remap_dependencies(block, new_acc(__CALLER__))
     end
   end
 
-  defmacro inject(target_node, opts) do
-    {_, _, split_name} = target_node
-    target = Module.concat(split_name)
-    interceptor = Module.concat([Jex, Generated, target])
-    resolver = opts[:via] || Resolver
-    functions = generate_functions(target, interceptor, resolver)
-    Module.create(interceptor, functions, __CALLER__)
-    quote do: alias(unquote(interceptor))
+  defp new_acc(caller), do: %__MODULE__{caller: caller, resolver: default_resolver()}
+
+  defp remove_configuration({:__block__, meta, children}) do
+    {:__block__, meta, Enum.reject(children, fn {marker, _, _} -> marker == :resolve_with end)}
   end
 
-  def generate_functions(target, interceptor, resolver) do
-    target.__info__(:functions)
-    |> Enum.map(fn {name, arity} ->
-      generate_function(target, interceptor, resolver, name, arity)
-    end)
+  defp remove_configuration(node), do: node
+
+  defp remap_dependencies({:__block__, meta, children}, acc) do
+    {:__block__, meta,
+     children
+     |> Enum.reduce(acc, &process_node/2)
+     |> Map.get(:nodes)
+     |> Enum.reverse()}
   end
 
-  def generate_function(target, interceptor, resolver, name, arity) do
-    args = Macro.generate_arguments(arity, interceptor)
+  defp remap_dependencies({:alias, _, _} = single_node, acc) do
+    single_node
+    |> process_node(acc)
+    |> Map.get(:nodes)
+    |> hd
+  end
 
-    quote do
-      def unquote(name)(unquote_splicing(args)) do
-        target = unquote(resolver).resolve(unquote(target))
-        apply(target, unquote(name), unquote(args))
-      end
-    end
+  defp process_node({:resolve_with, _, [{_, _, resolver}]}, acc) do
+    %{acc | resolver: Module.concat(resolver)}
+  end
+
+  defp process_node({:resolve_with, _, [{_, _, resolver}, opts]}, acc) do
+    %{acc | resolver: Module.concat(resolver), dynamic: opts[:dynamic]}
+  end
+
+  defp process_node({:alias, meta, [target]}, acc) do
+    process_node({:alias, meta, [target, []]}, acc)
+  end
+
+  defp process_node({:alias, _meta, [target, opts]}, acc) do
+    resolved_target = resolve_target(target, acc)
+    alias_as = opts[:as] || default_as(target)
+    node = quote do: alias(unquote(resolved_target), as: unquote(alias_as))
+    %{acc | nodes: [node | acc.nodes]}
+  end
+
+  defp resolve_target({marker, meta, children}, %{dynamic: false} = acc) do
+    {marker, meta,
+     children
+     |> Module.concat()
+     |> acc.resolver.resolve()}
+  end
+
+  defp resolve_target({marker, meta, children}, %{dynamic: true} = acc) do
+    {marker, meta,
+     children
+     |> Module.concat()
+     |> Interceptor.generate(acc.resolver, acc.caller)}
+  end
+
+  defp default_as(target) do
+    {_, _, original_module_name} = target
+    original_module_name |> List.last() |> List.wrap() |> Module.concat()
+  end
+
+  defp default_resolver() do
+    Application.get_env(:jex, :resolver) || Resolver
   end
 end
