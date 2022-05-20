@@ -1,4 +1,6 @@
 defmodule Jex.TestResolver do
+  @moduledoc false
+
   use Jex.Resolver
   alias Jex.TestServer
 

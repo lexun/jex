@@ -1,4 +1,6 @@
 defmodule Jex.Mox do
+  @moduledoc false
+
   use Jex.Resolver
   require Mox
 

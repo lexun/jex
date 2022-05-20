@@ -1,4 +1,6 @@
 defmodule Jex.Example.ModUsingInjector do
+  @moduledoc false
+
   use Jex.Injector do
     alias Jex.Example.BasicDep, as: Dep
     alias Jex.Example.DepWithBehaviour

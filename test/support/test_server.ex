@@ -1,4 +1,6 @@
 defmodule Jex.TestServer do
+  @moduledoc false
+
   use Agent
 
   def start_link(_opts) do

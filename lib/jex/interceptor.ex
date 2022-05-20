@@ -1,6 +1,15 @@
 defmodule Jex.Interceptor do
   @moduledoc false
 
+  @doc """
+  Generates interceptor modules for dynamic runtime resolution.
+
+  The generated interceptor modules are injected where the caller aliases a
+  dependency when the resolver is `dynamic`.
+
+  Whenver the interceptor functions are called, the resolver is invoked with the
+  original target, and determines which module the call will be delegated to.
+  """
   def generate(target, resolver, caller) do
     interceptor = Module.concat(resolver, target)
     functions = generate_functions(target, interceptor, resolver)

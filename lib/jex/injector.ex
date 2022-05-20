@@ -1,4 +1,49 @@
 defmodule Jex.Injector do
+  @moduledoc """
+  Injects dependencies by subjecting aliases to a resolver.
+
+  The target module of each alias is provided to a resolver that determines
+  which module should actually be aliased in the code follows. By default, that
+  resolver is `Jex.Resolver`, which simply preserves the initial target.
+
+      defmodule Example do
+        use Jex.Injector do
+          alias Example.Greeter
+        end
+
+        def greet() do
+          Greeter.hello()
+        end
+      end
+
+
+  A custom resolver can be set in your application config with something like:
+
+      # config/test.exs
+
+      import Config
+      config :jex, resolver: MyApp.MockResolver
+
+  It can also be set using `resolve_with/1`, which will change the resolver for
+  all alias statements below.
+
+      use Jex.Injector do
+        alias Example.Greeter
+
+        resolve_with MyApp.CustomResolver
+        alias Example.AnotherDependency
+      end
+
+  Normally the resolver will be called at compile time to determine which module
+  will be injected, however this can be done at runtime using `resolve_with/2`
+  with `dynamic: true`.
+
+      use Jex.Injector do
+        resolve_with MyApp.FeatureFlagResolver, dynamic: true
+        alias Example.Greeter
+      end
+  """
+
   alias Jex.{Interceptor, Resolver}
 
   defstruct [:caller, :resolver, nodes: [], dynamic: false]
