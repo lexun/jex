@@ -5,4 +5,4 @@
 
 An experimental and evolving attempt at flexible dependency injection in Elixir.
 
-Documentation will be incoming as the project develops.
+Not yet ready for use. Documentation will be incoming as the project develops.
